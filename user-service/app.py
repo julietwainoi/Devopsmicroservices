@@ -10,7 +10,7 @@ def users():
     if auth.status_code != 200:
         return {"error": "unauthorized"}, 401
 
-    products = requests.get("http://product-service:5000/products").json()
+    products = requests.get("http://product-service:5000/products/").json()
     return jsonify({
         "users": ["alice", "bob"],
         "products_visible": products["products"]

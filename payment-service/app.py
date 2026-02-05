@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-@app.route("/pay", methods=["POST"])
+@app.route("/pay/", methods=["POST"])
 def pay():
     data = request.json
     amount = data.get("amount")

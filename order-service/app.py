@@ -11,7 +11,7 @@ def create_order():
         return {"error": "unauthorized"}, 401
 
     product_id = request.json.get("product_id")
-    product_resp = requests.get("http://product-service:5000/products").json()
+    product_resp = requests.get("http://product-service:5000/products/").json()
     if product_id not in range(len(product_resp["products"])):
         return {"error": "product not available"}, 400
 

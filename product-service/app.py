@@ -2,7 +2,7 @@ from flask import Flask, jsonify
 
 app = Flask(__name__)
 
-@app.route("/products")
+@app.route("/products/", strict_slashes=False)
 def products():
     return jsonify({
         "products": ["laptop", "phone", "tablet"]
