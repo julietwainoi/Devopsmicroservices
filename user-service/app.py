@@ -3,7 +3,7 @@ import requests
 
 app = Flask(__name__)
 
-@app.route("/users", strict_slashes=False)
+@app.route("/", strict_slashes=False)
 def users():
     token = request.headers.get("Authorization")
     auth = requests.post("http://auth-service:5000/validate", headers={"Authorization": token})
