@@ -1,4 +1,4 @@
-version: "3.9"
+# version: "3.9"
 
 services:
   nginx:
@@ -46,9 +46,15 @@ services:
     container_name: order-service
     expose:
       - "5000"
+    environment:
+      DB_HOST: order-db
+      DB_NAME: orders_user
+      DB_USER: orders_user
+      DB_PASS: orders_pass
+    depends_on:
+      - order-db
     networks:
       - micro-net
-
   payment-service:
     build: ./payment-service
     container_name: payment-service
@@ -56,6 +62,30 @@ services:
       - "5000"
     networks:
       - micro-net
+
+  order-db:
+    image: postgres:16
+    container_name: order-db
+    environment:
+      POSTGRES_DB: orders_user
+      POSTGRES_USER: orders_user
+      POSTGRES_PASSWORD: orders_pass
+    volumes:
+      - order_db_data:/var/lib/postgresql/data
+      - ./order-db-services/init:/docker-entrypoint-initdb.d
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U orders_user" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - micro-net
+
+volumes:
+  order_db_data:
+
 
 networks:
   micro-net:

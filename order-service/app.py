@@ -1,5 +1,10 @@
+
 from flask import Flask, request, jsonify
 import requests
+from db import get_connection
+from psycopg2.extras import Json
+
+
 
 app = Flask(__name__)
 
@@ -28,23 +33,19 @@ def create_order():
 
     product_id = data["product_id"]
 
-    # product_resp = requests.get(f"{PRODUCT_SERVICE}/products/")
-    # if product_resp.status_code != 200:
-        # return {"error": "product service unavailable"}, 503
     product_resp = requests.get(f"{PRODUCT_SERVICE}/")
     if product_resp.status_code != 200:
         return {"error": "product service unavailable"}, 503
 
     products = product_resp.json().get("products", [])
-    if product_id not in range(len(products)):
+    
+       # FIX: Check bounds properly and assign selected_product
+    if not isinstance(products, list) or product_id >= len(products) or product_id < 0:
         return {"error": "product not available"}, 400
+  
+    selected_product = products[product_id]
+ 
 
-    # 4️⃣ Process payment (token forwarded)
-    # payment_resp = requests.post(
-        # f"{PAYMENT_SERVICE}/pay/",
-        # headers=headers,
-        # json={"amount": 100}
-    # )
         # 4️⃣ Payment
     payment_resp = requests.post(
         f"{PAYMENT_SERVICE}/",
@@ -56,11 +57,42 @@ def create_order():
         return {"error": "payment failed"}, 402
 
     # 5️⃣ Success
+    # return jsonify({
+        # "status": "order placed",
+        # "product": products[product_id],
+        # "payment": payment_resp.json()
+    # }), 201
+    # 5️⃣ Save order to database (ONLY after payment success)
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+
+        cur.execute(
+            """
+            INSERT INTO orders (product, status)
+            VALUES (%s, %s)
+            RETURNING id
+            """,
+            (Json(selected_product), "PAID")
+        )
+
+        order_id = cur.fetchone()[0]
+        conn.commit()
+
+        cur.close()
+        conn.close()
+
+    except Exception as e:
+        return {"error": "database error", "details": str(e)}, 500
+
+    # 6️⃣ Success response
     return jsonify({
         "status": "order placed",
-        "product": products[product_id],
+        "order_id": order_id,
+        "product": selected_product,
         "payment": payment_resp.json()
     }), 201
+
 
 
 if __name__ == "__main__":
