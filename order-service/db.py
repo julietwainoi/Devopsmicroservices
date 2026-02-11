@@ -1,12 +1,14 @@
 import psycopg2
-import os
-
+from psycopg2.extras import Json
 
 def get_connection():
-    return psycopg2.connect(
-        host=os.getenv("DB_HOST", "order-db"),
-        database=os.getenv("DB_NAME", "orders"),
-        user=os.getenv("DB_USER", "orders_user"),
-        password=os.getenv("DB_PASS", "orders_pass"),
+    conn = psycopg2.connect(
+        host="order-db",
+        database="orders_user",
+        user="orders_user",
+        password="orders_pass"
     )
-
+    # Set the default search_path
+    with conn.cursor() as cur:
+        cur.execute("SET search_path TO orders, public;")
+    return conn
