@@ -12,6 +12,16 @@ AUTH_SERVICE = "http://auth-service:5000"
 PRODUCT_SERVICE = "http://product-service:5000"
 PAYMENT_SERVICE = "http://payment-service:5000"
 
+@app.route("/health")
+def health():
+    try:
+        conn = get_connection()
+        conn.close()
+        return {"status": "ok"}, 200
+    except Exception:
+        return {"status": "unhealthy"}, 500
+
+
 @app.route("/", methods=["POST"], strict_slashes=False)
 def create_order():
     # 1️⃣ Extract token

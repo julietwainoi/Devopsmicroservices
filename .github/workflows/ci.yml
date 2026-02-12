@@ -1,0 +1,54 @@
+name: Docker Compose CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout source code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ Verify Docker is available
+      - name: Check Docker version
+        run: docker --version
+
+      - name: Check Docker Compose version
+        run: docker compose version
+
+      # 3️⃣ Build all services
+      - name: Build Docker images
+        run: docker compose build
+
+      # 4️⃣ Start services
+      - name: Start services
+        run: docker compose up -d
+
+      # 5️⃣ Wait for containers to be ready
+      - name: Wait for services
+        run: sleep 15
+
+      # 6️⃣ Health checks (FAIL CI if any fail)
+      - name: Check gateway health
+        run: curl --fail http://order_service/health/health
+
+      # Optional: check individual services via nginx
+      # - name: Check auth service
+      #   run: curl --fail http://localhost/auth/health
+
+      # 7️⃣ Show logs if something fails (debug helper)
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs
+
+      # 8️⃣ Shutdown services
+      - name: Shutdown
+        if: always()
+        run: docker compose down -v
