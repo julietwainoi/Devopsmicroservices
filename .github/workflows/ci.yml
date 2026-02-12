@@ -37,7 +37,7 @@ jobs:
 
       # 6️⃣ Health checks (FAIL CI if any fail)
       - name: Check gateway health
-        run: curl --fail http://order_service/health/health
+        run: curl --fail http://order_service:5000/health
 
       # Optional: check individual services via nginx
       # - name: Check auth service
