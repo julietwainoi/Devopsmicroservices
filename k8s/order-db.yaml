@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: order-db
+  template:
+    metadata:
+      labels:
+        app: order-db
+    spec:
+      containers:
+        - name: order-db
+          image: postgres:16
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: POSTGRES_DB
+              value: "orders_user"
+            - name: POSTGRES_USER
+              value: "orders_user"
+            - name: POSTGRES_PASSWORD
+              value: "orders_pass"
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: order-db-storage      # ← mount the volume
+              mountPath: /var/lib/postgresql/data   # ← postgres data folder
+      volumes:
+        - name: order-db-storage
+          persistentVolumeClaim:
+            claimName: order-db-pvc     # ← reference the PVC
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-db
+spec:
+  selector:
+    app: order-db
+  ports:
+    - port: 5432
+      targetPort: 5432

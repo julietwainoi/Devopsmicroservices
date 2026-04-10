@@ -5,6 +5,11 @@ import datetime
 app = Flask(__name__)
 SECRET_KEY = "devops-secret"
 
+# Add this to your Flask app
+@app.route('/health')
+def health():
+    return {'status': 'healthy'}, 200
+
 @app.route("/login", methods=["POST"])
 def login():
     data = request.json
