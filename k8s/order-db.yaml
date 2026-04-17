@@ -1,8 +1,9 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: order-db
 spec:
+  serviceName: order-db          # ← must match the headless service below
   replicas: 1
   selector:
     matchLabels:
@@ -26,18 +27,29 @@ spec:
           ports:
             - containerPort: 5432
           volumeMounts:
-            - name: order-db-storage      # ← mount the volume
-              mountPath: /var/lib/postgresql/data   # ← postgres data folder
+            - name: order-db-storage
+              mountPath: /var/lib/postgresql/data
+            - name: order-db-init
+              mountPath: /docker-entrypoint-initdb.d
       volumes:
-        - name: order-db-storage
-          persistentVolumeClaim:
-            claimName: order-db-pvc     # ← reference the PVC
+        - name: order-db-init          # ← ConfigMap stays in volumes (not persistent)
+          configMap:
+            name: order-db-init
+  volumeClaimTemplates:                # ← replaces your separate PVC yaml
+    - metadata:
+        name: order-db-storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: order-db
 spec:
+  clusterIP: None                      # ← makes it a headless service (required for StatefulSet)
   selector:
     app: order-db
   ports:

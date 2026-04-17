@@ -1,0 +1,39 @@
+{{- range .Values.services }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .name }}-service
+spec:
+  selector:
+    app: {{ .name }}
+  ports:
+    - port: 5000
+      targetPort: {{ .port }}
+---
+{{- end }}
+kind: Service
+{{- range .Values.services }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .name }}-service
+spec:
+  selector:
+    app: {{ .name }}
+  ports:
+    - port: 5000
+      targetPort: {{ .port }}
+---
+{{- end }}metadata:
+  name: {{ include "my-app.fullname" . }}
+  labels:
+    {{- include "my-app.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "my-app.selectorLabels" . | nindent 4 }}
