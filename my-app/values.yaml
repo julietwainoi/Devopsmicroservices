@@ -3,6 +3,10 @@ services:
     image: auth-service:latest
     port: 5000
 
+  - name: user
+    image: user-service:latest
+    port: 5000
+
   - name: product
     image: product-service:latest
     port: 5000
@@ -14,6 +18,15 @@ services:
   - name: order
     image: order-service:latest
     port: 5000
+    env:
+      - name: DB_HOST
+        value: "order-db"
+      - name: DB_NAME
+        value: "orders_user"
+      - name: DB_USER
+        value: "orders_user"
+      - name: DB_PASS
+        value: "orders_pass"
 
 hpa:
   minReplicas: 2
