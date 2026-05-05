@@ -3,6 +3,10 @@ import requests
 
 app = Flask(__name__)
 
+@app.route("/health")
+def health():
+    return {"status": "healthy"}, 200
+
 @app.route("/", strict_slashes=False)
 def users():
     token = request.headers.get("Authorization")

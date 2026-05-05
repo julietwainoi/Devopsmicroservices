@@ -1,9 +1,12 @@
 from flask import Flask, request, jsonify
 import jwt
 import datetime
+import os
 
 app = Flask(__name__)
-SECRET_KEY = "devops-secret"
+SECRET_KEY = os.getenv("SECRET_KEY", "devops-secret")
+ADMIN_USER = os.getenv("ADMIN_USER", "admin")
+ADMIN_PASS = os.getenv("ADMIN_PASS", "password")
 
 # Add this to your Flask app
 @app.route('/health')
@@ -16,7 +19,7 @@ def login():
     username = data.get("username")
     password = data.get("password")
 
-    if username == "admin" and password == "password":
+    if username == ADMIN_USER and password == ADMIN_PASS:
         token = jwt.encode({
             "user": username,
             "exp": datetime.datetime.utcnow() + datetime.timedelta(minutes=30)

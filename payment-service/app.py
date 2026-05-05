@@ -2,6 +2,10 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
+@app.route("/health")
+def health():
+    return {"status": "healthy"}, 200
+
 @app.route("/", methods=["POST"],strict_slashes=False)
 def pay():
     data = request.json
