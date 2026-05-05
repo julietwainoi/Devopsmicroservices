@@ -41,7 +41,7 @@ hpa:
   maxReplicas: 5
   cpu: 50
 
-imagePullPolicy: Never  # change to IfNotPresent for real clusters
+imagePullPolicy: IfNotPresent  # Never for kind-only, IfNotPresent works if images are loaded
 
 
 
