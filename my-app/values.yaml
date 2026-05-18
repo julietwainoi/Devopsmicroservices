@@ -1,25 +1,25 @@
 services:
   - name: auth
-    image: auth-service:v1.0.0
+    image: ghcr.io/julietwainoi/auth-service:885406850fb2afba63ac57b25fa65c0b5fe574f9
     port: 5000
     envFrom:
       - secretRef:
           name: auth-secret
 
   - name: user
-    image: user-service:v1.0.0
+    image: ghcr.io/julietwainoi/user-service:885406850fb2afba63ac57b25fa65c0b5fe574f9
     port: 5000
 
   - name: product
-    image: product-service:v1.0.0
+    image: ghcr.io/julietwainoi/product-service:885406850fb2afba63ac57b25fa65c0b5fe574f9
     port: 5000
 
   - name: payment
-    image: payment-service:v1.0.0
+    image: ghcr.io/julietwainoi/payment-service:885406850fb2afba63ac57b25fa65c0b5fe574f9
     port: 5000
 
   - name: order
-    image: order-service:v1.0.0
+    image: ghcr.io/julietwainoi/order-service:885406850fb2afba63ac57b25fa65c0b5fe574f9
     port: 5000
     envFrom:
       - secretRef:
