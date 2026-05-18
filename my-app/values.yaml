@@ -34,7 +34,7 @@ orderDb:
   host: "order-db"
   name: "orders_user"
   user: "orders_user"
-  pass: "change-me-in-production"
+  pass: "orders_pass"
 
 hpa:
   minReplicas: 2

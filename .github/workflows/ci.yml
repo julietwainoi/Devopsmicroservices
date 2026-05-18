@@ -1,4 +1,4 @@
-name: Docker Compose CI
+name: CI - Build, Push, Update
 
 on:
   push:
@@ -7,48 +7,118 @@ on:
       - master
   pull_request:
 
-jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}
 
+jobs:
+  test:
+    runs-on: ubuntu-latest
     steps:
-      # 1️⃣ Checkout source code
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      # 2️⃣ Verify Docker is available
-      - name: Check Docker version
-        run: docker --version
 
       - name: Check Docker Compose version
         run: docker compose version
 
-      # 3️⃣ Build all services
-      - name: Build Docker images
+      - name: Build images for testing
         run: docker compose build
 
-      # 4️⃣ Start services
       - name: Start services
         run: docker compose up -d
 
-      # 5️⃣ Wait for containers to be ready
       - name: Wait for services
         run: sleep 15
 
-      # 6️⃣ Health checks (FAIL CI if any fail)
       - name: Check gateway health
         run: curl --fail http://localhost/health/
 
-      # Optional: check individual services via nginx
-      # - name: Check auth service
-      #   run: curl --fail http://localhost/auth/health
-
-      # 7️⃣ Show logs if something fails (debug helper)
       - name: Show logs on failure
         if: failure()
         run: docker compose logs
 
-      # 8️⃣ Shutdown services
       - name: Shutdown
         if: always()
         run: docker compose down -v
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    # Only push images on main/master, not on PRs
+    if: github.event_name == 'push'
+    needs: test
+    permissions:
+      contents: write       # needed to push values.yaml update back to repo
+      packages: write       # needed to push to GHCR
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set image tag
+        id: tag
+        run: echo "TAG=${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      # Build and push each service
+      - name: Build and push auth-service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./auth-service
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}/auth-service:${{ steps.tag.outputs.TAG }}
+
+      - name: Build and push user-service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./user-service
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}/user-service:${{ steps.tag.outputs.TAG }}
+
+      - name: Build and push product-service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./product-service
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}/product-service:${{ steps.tag.outputs.TAG }}
+
+      - name: Build and push payment-service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./payment-service
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}/payment-service:${{ steps.tag.outputs.TAG }}
+
+      - name: Build and push order-service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./order-service
+          push: true
+          tags: ${{ env.IMAGE_PREFIX }}/order-service:${{ steps.tag.outputs.TAG }}
+
+      # Update image tags in values.yaml so ArgoCD picks up the new images
+      - name: Update image tags in values.yaml
+        run: |
+          TAG=${{ steps.tag.outputs.TAG }}
+          PREFIX=${{ env.IMAGE_PREFIX }}
+
+          sed -i "s|image: auth-service:.*|image: ${PREFIX}/auth-service:${TAG}|" my-app/values.yaml
+          sed -i "s|image: user-service:.*|image: ${PREFIX}/user-service:${TAG}|" my-app/values.yaml
+          sed -i "s|image: product-service:.*|image: ${PREFIX}/product-service:${TAG}|" my-app/values.yaml
+          sed -i "s|image: payment-service:.*|image: ${PREFIX}/payment-service:${TAG}|" my-app/values.yaml
+          sed -i "s|image: order-service:.*|image: ${PREFIX}/order-service:${TAG}|" my-app/values.yaml
+
+      - name: Commit and push updated values.yaml
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add my-app/values.yaml
+          git diff --staged --quiet || git commit -m "ci: update image tags to ${{ steps.tag.outputs.TAG }}"
+          git push
