@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/julietwainoi/Devopsmicroservices
-    targetRevision: main
+    targetRevision: HEAD
     path: my-app
     helm:
       valueFiles:
