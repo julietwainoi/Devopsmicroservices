@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-@app.route("/health")
+@app.route("/health", strict_slashes=False)
 def health():
     return {"status": "healthy"}, 200
 
