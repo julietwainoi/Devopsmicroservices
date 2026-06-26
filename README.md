@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS orders.orders (
 
 ℹ️ The SQL scripts in /docker-entrypoint-initdb.d run only when the database volume is empty.
 
-🔌 Docker Compose Configuration
+� Docker Compose Configuration
 
 All services run on a shared Docker bridge network: micro-net
 
@@ -123,16 +123,20 @@ Useful commands inside psql
 \dt orders.*        -- list tables in orders schema
 \d orders.orders    -- describe table
 
-🔑 Authentication Example
-TOKEN=$(curl -s -X POST http://localhost/auth/login \
+
+ TOKEN=$(curl -s -X POST http://microservices.local/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"password"}' | jq -r '.token')
 
-📦 Create an Order Example
-curl -X POST http://localhost/orders/ \
+curl -X POST http://microservices.local/orders/ \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"product_id": 1}'
+
+curl -X POST http://microservices.local/payments/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"amount": 100}'
 
 🧠 Key Concepts Demonstrated
 
