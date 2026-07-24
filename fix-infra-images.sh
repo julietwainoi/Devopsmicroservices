@@ -3,7 +3,7 @@
 
 CLUSTER_NAME="kind-test"
 
-echo "🔧 Re-pulling infrastructure images for linux/amd64..."
+echo "🔧 Pulling infrastructure images and loading into kind..."
 
 INFRA_IMAGES=(
   "nginx:latest"
@@ -12,20 +12,23 @@ INFRA_IMAGES=(
   "prom/prometheus:latest"
   "prom/node-exporter:latest"
   "nginx/nginx-prometheus-exporter:latest"
+  "grafana/loki:2.9.0"
+  "grafana/promtail:2.9.0"
 )
 
 for IMAGE in "${INFRA_IMAGES[@]}"; do
   echo ""
-  echo "  ⏳ Re-pulling $IMAGE for linux/amd64..."
+  echo "  ⏳ Pulling $IMAGE..."
   
   # Remove old image
   docker rmi "$IMAGE" 2>/dev/null || true
 
-  # Pull fresh for correct platform
-  docker pull --platform linux/amd64 "$IMAGE"
+  # Pull for current platform
+  docker pull "$IMAGE"
 
   echo "  📦 Loading $IMAGE into kind-test..."
-  if kind load docker-image "$IMAGE" --name "$CLUSTER_NAME"; then
+  if docker save "$IMAGE" | docker exec -i kind-test-control-plane ctr --namespace=k8s.io images import - && \
+     docker save "$IMAGE" | docker exec -i kind-test-worker ctr --namespace=k8s.io images import -; then
     echo "  ✅ $IMAGE loaded successfully"
   else
     echo "  ❌ Still failed: $IMAGE"
