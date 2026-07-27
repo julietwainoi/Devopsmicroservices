@@ -15,8 +15,6 @@ data:
           replication_factor: 1
       chunk_idle_period: 5m
       chunk_retain_period: 30s
-      wal:
-        dir: /wal
     schema_config:
       configs:
         - from: 2020-01-01
@@ -56,21 +54,8 @@ spec:
         app: loki
     spec:
       securityContext:
-        fsGroup: 10001
-        runAsGroup: 10001
-        runAsNonRoot: true
-        runAsUser: 10001
-      initContainers:
-        - name: fix-permissions
-          image: busybox
-          command: ["sh", "-c", "mkdir -p /loki/index /loki/cache /loki/chunks /loki/compactor /wal && chown -R 10001:10001 /loki /wal"]
-          securityContext:
-            runAsUser: 0
-          volumeMounts:
-            - name: loki-storage
-              mountPath: /loki
-            - name: loki-wal
-              mountPath: /wal
+        runAsUser: 0
+        runAsGroup: 0
       containers:
         - name: loki
           image: grafana/loki:2.9.0
@@ -84,15 +69,11 @@ spec:
               mountPath: /etc/loki
             - name: loki-storage
               mountPath: /loki
-            - name: loki-wal
-              mountPath: /wal
       volumes:
         - name: loki-config
           configMap:
             name: loki-config
         - name: loki-storage
-          emptyDir: {}
-        - name: loki-wal
           emptyDir: {}
 ---
 apiVersion: v1
