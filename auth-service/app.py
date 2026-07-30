@@ -2,8 +2,10 @@ from flask import Flask, request, jsonify
 import jwt
 import datetime
 import os
+from prometheus_flask_exporter import PrometheusMetrics
 
 app = Flask(__name__)
+metrics = PrometheusMetrics(app)
 SECRET_KEY = os.getenv("SECRET_KEY", "devops-secret")
 ADMIN_USER = os.getenv("ADMIN_USER", "admin")
 ADMIN_PASS = os.getenv("ADMIN_PASS", "password")
