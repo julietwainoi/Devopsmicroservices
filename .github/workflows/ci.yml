@@ -55,6 +55,11 @@ jobs:
 
       - name: Build images for testing
         run: docker compose build
+      - name: Debug - check prometheus.yml
+        run: |
+           ls -la ./monitoring/
+           file ./monitoring/prometheus.yml
+           cat ./monitoring/prometheus.yml
 
       - name: Start services
         run: docker compose up -d
