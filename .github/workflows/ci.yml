@@ -156,19 +156,19 @@ jobs:
           PREFIX=${{ env.IMAGE_PREFIX }}
 
           if [ "${{ needs.changes.outputs.auth }}" == "true" ]; then
-            sed -i "s|image: auth-service:.*|image: ${PREFIX}/auth-service:${TAG}|" my-app/values.yaml
+            sed -i "s|image:.*auth-service:.*|image: ${PREFIX}/auth-service:${TAG}|" my-app/values.yaml
           fi
           if [ "${{ needs.changes.outputs.user }}" == "true" ]; then
-            sed -i "s|image: user-service:.*|image: ${PREFIX}/user-service:${TAG}|" my-app/values.yaml
+            sed -i "s|image:.*user-service:.*|image: ${PREFIX}/user-service:${TAG}|" my-app/values.yaml
           fi
           if [ "${{ needs.changes.outputs.product }}" == "true" ]; then
-            sed -i "s|image: product-service:.*|image: ${PREFIX}/product-service:${TAG}|" my-app/values.yaml
+            sed -i "s|image:.*product-service:.*|image: ${PREFIX}/product-service:${TAG}|" my-app/values.yaml
           fi
           if [ "${{ needs.changes.outputs.payment }}" == "true" ]; then
-            sed -i "s|image: payment-service:.*|image: ${PREFIX}/payment-service:${TAG}|" my-app/values.yaml
+            sed -i "s|image:.*payment-service:.*|image: ${PREFIX}/payment-service:${TAG}|" my-app/values.yaml
           fi
           if [ "${{ needs.changes.outputs.order }}" == "true" ]; then
-            sed -i "s|image: order-service:.*|image: ${PREFIX}/order-service:${TAG}|" my-app/values.yaml
+            sed -i "s|image:.*order-service:.*|image: ${PREFIX}/order-service:${TAG}|" my-app/values.yaml
           fi
 
       - name: Commit and push updated values.yaml
