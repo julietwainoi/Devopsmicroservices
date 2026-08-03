@@ -4,6 +4,7 @@ import datetime
 import os
 from prometheus_flask_exporter import PrometheusMetrics
 
+# v2 - prometheus metrics enabled
 app = Flask(__name__)
 metrics = PrometheusMetrics(app)
 SECRET_KEY = os.getenv("SECRET_KEY", "devops-secret")

@@ -5,6 +5,7 @@ from db import get_connection
 from psycopg2.extras import Json
 from prometheus_flask_exporter import PrometheusMetrics
 
+# v2 - prometheus metrics enabled
 app = Flask(__name__)
 metrics = PrometheusMetrics(app)
 

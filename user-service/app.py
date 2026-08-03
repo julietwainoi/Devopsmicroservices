@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 import requests
 from prometheus_flask_exporter import PrometheusMetrics
 
+# v2 - prometheus metrics enabled
 app = Flask(__name__)
 metrics = PrometheusMetrics(app)
 
