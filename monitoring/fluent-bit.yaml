@@ -1,0 +1,173 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-config
+  namespace: monitoring
+data:
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush         5
+        Daemon        off
+        Log_Level     info
+        Parsers_File  parsers.conf
+
+    [INPUT]
+        Name              tail
+        Path              /var/log/containers/auth-*_default_*.log
+        Tag               kube.auth
+        Refresh_Interval  10
+        Mem_Buf_Limit     2MB
+        Skip_Long_Lines   On
+
+    [INPUT]
+        Name              tail
+        Path              /var/log/containers/order-*_default_*.log
+        Tag               kube.order
+        Refresh_Interval  10
+        Mem_Buf_Limit     2MB
+        Skip_Long_Lines   On
+
+    [INPUT]
+        Name              tail
+        Path              /var/log/containers/user-*_default_*.log
+        Tag               kube.user
+        Refresh_Interval  10
+        Mem_Buf_Limit     2MB
+        Skip_Long_Lines   On
+
+    [INPUT]
+        Name              tail
+        Path              /var/log/containers/product-*_default_*.log
+        Tag               kube.product
+        Refresh_Interval  10
+        Mem_Buf_Limit     2MB
+        Skip_Long_Lines   On
+
+    [INPUT]
+        Name              tail
+        Path              /var/log/containers/payment-*_default_*.log
+        Tag               kube.payment
+        Refresh_Interval  10
+        Mem_Buf_Limit     2MB
+        Skip_Long_Lines   On
+
+    [FILTER]
+        Name                modify
+        Match               kube.auth
+        Add                 namespace default
+        Add                 app auth
+
+    [FILTER]
+        Name                modify
+        Match               kube.order
+        Add                 namespace default
+        Add                 app order
+
+    [FILTER]
+        Name                modify
+        Match               kube.user
+        Add                 namespace default
+        Add                 app user
+
+    [FILTER]
+        Name                modify
+        Match               kube.product
+        Add                 namespace default
+        Add                 app product
+
+    [FILTER]
+        Name                modify
+        Match               kube.payment
+        Add                 namespace default
+        Add                 app payment
+
+    [OUTPUT]
+        Name              loki
+        Match             *
+        Host              loki.monitoring.svc.cluster.local
+        Port              3100
+        Labels            job=fluentbit
+
+  parsers.conf: |
+    [PARSER]
+        Name        docker
+        Format      json
+        Time_Key    time
+        Time_Format %Y-%m-%dT%H:%M:%S.%L%z
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fluent-bit
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: fluent-bit
+rules:
+  - apiGroups: [""]
+    resources:
+      - namespaces
+      - pods
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: fluent-bit
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: fluent-bit
+subjects:
+  - kind: ServiceAccount
+    name: fluent-bit
+    namespace: monitoring
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluent-bit
+  namespace: monitoring
+  labels:
+    app: fluent-bit
+spec:
+  selector:
+    matchLabels:
+      app: fluent-bit
+  template:
+    metadata:
+      labels:
+        app: fluent-bit
+    spec:
+      serviceAccountName: fluent-bit
+      containers:
+      - name: fluent-bit
+        image: fluent/fluent-bit:2.1
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: varlog
+          mountPath: /var/log
+          readOnly: true
+        - name: varlibdockercontainers
+          mountPath: /var/lib/docker/containers
+          readOnly: true
+        - name: fluent-bit-config
+          mountPath: /fluent-bit/etc/
+        resources:
+          limits:
+            memory: 200Mi
+          requests:
+            cpu: 100m
+            memory: 100Mi
+      volumes:
+      - name: varlog
+        hostPath:
+          path: /var/log
+      - name: varlibdockercontainers
+        hostPath:
+          path: /var/lib/docker/containers
+      - name: fluent-bit-config
+        configMap:
+          name: fluent-bit-config

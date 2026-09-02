@@ -1,0 +1,88 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: log-forwarder-script
+  namespace: monitoring
+data:
+  forward-logs.sh: |
+    #!/bin/sh
+    while true; do
+      for app in auth user product payment order; do
+        # Get pod logs and send to Loki
+        pod=$(kubectl get pod -n default -l app=$app -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+        if [ ! -z "$pod" ]; then
+          logs=$(kubectl logs -n default $pod --tail=5 --since=30s 2>/dev/null | jq -Rs . | tr -d '\n')
+          if [ ! -z "$logs" ] && [ "$logs" != '""' ]; then
+            timestamp=$(date +%s)000000000
+            curl -s -X POST -H "Content-Type: application/json" \
+              -d "{\"streams\":[{\"stream\":{\"namespace\":\"default\",\"app\":\"$app\",\"pod\":\"$pod\"},\"values\":[[\"$timestamp\",$logs]]}]}" \
+              http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push
+          fi
+        fi
+      done
+      sleep 30
+    done
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: log-forwarder
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: log-forwarder
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: log-forwarder
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: log-forwarder
+subjects:
+  - kind: ServiceAccount
+    name: log-forwarder
+    namespace: monitoring
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: log-forwarder
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: log-forwarder
+  template:
+    metadata:
+      labels:
+        app: log-forwarder
+    spec:
+      serviceAccountName: log-forwarder
+      containers:
+      - name: forwarder
+        image: bitnami/kubectl:latest
+        command: ["/bin/sh", "/scripts/forward-logs.sh"]
+        volumeMounts:
+        - name: script
+          mountPath: /scripts
+        resources:
+          limits:
+            memory: 128Mi
+            cpu: 100m
+          requests:
+            memory: 64Mi
+            cpu: 50m
+      volumes:
+      - name: script
+        configMap:
+          name: log-forwarder-script
+          defaultMode: 0755

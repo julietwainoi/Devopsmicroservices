@@ -17,6 +17,9 @@ spec:
         prometheus.io/port: {{ .port | quote }}
         prometheus.io/path: "/metrics"
     spec:
+      # Use ServiceAccount for each service
+      serviceAccountName: {{ .name }}-sa
+      automountServiceAccountToken: true
       containers:
       - name: {{ .name }}
         image: {{ .image }}

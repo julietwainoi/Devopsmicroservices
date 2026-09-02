@@ -1,0 +1,51 @@
+# Roles defining permissions for different service types
+---
+# Role for services that need to read ConfigMaps and Secrets
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: config-reader
+  namespace: default
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+---
+# Role for services that need to interact with pods (for health checks, etc.)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pod-reader
+  namespace: default
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+---
+# Role for services that need to create/update resources (e.g., order service)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: resource-manager
+  namespace: default
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list", "watch", "create", "update"]
+- apiGroups: [""]
+  resources: ["pods", "services"]
+  verbs: ["get", "list", "watch"]
+---
+# Role for monitoring access
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: metrics-reader
+  namespace: default
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get"]

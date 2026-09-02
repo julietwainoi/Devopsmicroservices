@@ -1,0 +1,246 @@
+# Side-by-side comparison: Role vs ClusterRole
+
+# ============================================
+# EXAMPLE 1: Role (Namespace Scoped)
+# ============================================
+# Use case: user-service needs to read configs in DEFAULT namespace only
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: user-service-sa
+  namespace: default  # Lives in default namespace
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: config-reader
+  namespace: default  # ← ONLY works in default namespace
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding  # ← Binds Role to ServiceAccount
+metadata:
+  name: user-service-config-binding
+  namespace: default
+subjects:
+- kind: ServiceAccount
+  name: user-service-sa
+  namespace: default
+roleRef:
+  kind: Role  # ← References a Role (not ClusterRole)
+  name: config-reader
+  apiGroup: rbac.authorization.k8s.io
+
+# Result: user-service-sa can ONLY read configmaps/secrets in DEFAULT namespace
+# Cannot access: staging namespace, production namespace, cluster resources
+
+
+# ============================================
+# EXAMPLE 2: ClusterRole (Cluster Scoped)
+# ============================================
+# Use case: Prometheus needs to monitor ALL namespaces
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus-sa
+  namespace: monitoring  # Lives in monitoring namespace
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole  # ← Works everywhere
+metadata:
+  name: prometheus-reader
+  # NO namespace field - applies to entire cluster
+rules:
+- apiGroups: [""]
+  resources: ["nodes", "pods", "services", "endpoints"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["namespaces"]  # ← Cluster resource (no namespace)
+  verbs: ["get", "list"]
+- nonResourceURLs: ["/metrics"]  # ← Cluster-level URLs
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding  # ← Binds ClusterRole to ServiceAccount
+metadata:
+  name: prometheus-cluster-reader
+  # NO namespace field
+subjects:
+- kind: ServiceAccount
+  name: prometheus-sa
+  namespace: monitoring  # ServiceAccount can be in any namespace
+roleRef:
+  kind: ClusterRole  # ← References a ClusterRole (not Role)
+  name: prometheus-reader
+  apiGroup: rbac.authorization.k8s.io
+
+# Result: prometheus-sa can read pods/services in ALL namespaces
+# Can access: default, staging, production, AND cluster resources like nodes
+
+
+# ============================================
+# EXAMPLE 3: ClusterRole but limited to one namespace
+# ============================================
+# Use case: Reuse a ClusterRole definition but only in one namespace
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: limited-reader-sa
+  namespace: staging
+---
+# Reuse the prometheus-reader ClusterRole from above
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding  # ← RoleBinding (not ClusterRoleBinding)
+metadata:
+  name: limited-prometheus-binding
+  namespace: staging  # ← Only applies to staging
+subjects:
+- kind: ServiceAccount
+  name: limited-reader-sa
+  namespace: staging
+roleRef:
+  kind: ClusterRole  # ← Can reference a ClusterRole
+  name: prometheus-reader
+  apiGroup: rbac.authorization.k8s.io
+
+# Result: limited-reader-sa has prometheus-reader permissions
+# BUT only in the staging namespace (because RoleBinding is namespaced)
+
+
+# ============================================
+# EXAMPLE 4: Multiple Roles for one ServiceAccount
+# ============================================
+# Use case: auth-service needs BOTH config access AND pod access
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: auth-service-sa
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: config-reader
+  namespace: default
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pod-reader
+  namespace: default
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+---
+# First RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: auth-config-binding
+  namespace: default
+subjects:
+- kind: ServiceAccount
+  name: auth-service-sa
+  namespace: default
+roleRef:
+  kind: Role
+  name: config-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+# Second RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: auth-pod-binding
+  namespace: default
+subjects:
+- kind: ServiceAccount
+  name: auth-service-sa
+  namespace: default
+roleRef:
+  kind: Role
+  name: pod-reader
+  apiGroup: rbac.authorization.k8s.io
+
+# Result: auth-service-sa has BOTH config-reader AND pod-reader permissions
+# This is additive - permissions stack up
+
+
+# ============================================
+# EXAMPLE 5: Specific resource access
+# ============================================
+# Use case: payment-service only needs ONE specific secret
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: payment-service-sa
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: payment-secret-reader
+  namespace: default
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  resourceNames: ["stripe-api-key"]  # ← ONLY this secret
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: payment-secret-binding
+  namespace: default
+subjects:
+- kind: ServiceAccount
+  name: payment-service-sa
+  namespace: default
+roleRef:
+  kind: Role
+  name: payment-secret-reader
+  apiGroup: rbac.authorization.k8s.io
+
+# Result: payment-service-sa can ONLY read the "stripe-api-key" secret
+# Cannot read: any other secrets, configmaps, or any other resources
+
+
+# ============================================
+# SUMMARY OF BINDINGS
+# ============================================
+
+# RoleBinding + Role:
+#   ✓ Namespace scoped
+#   ✓ Most secure
+#   ✓ Use for microservices
+
+# ClusterRoleBinding + ClusterRole:
+#   ✓ Cluster wide
+#   ✗ Broader access
+#   ✓ Use for monitoring/admin
+
+# RoleBinding + ClusterRole:
+#   ✓ Reuse ClusterRole definition
+#   ✓ But limit to one namespace
+#   ✓ Good for consistency
+
+# ClusterRoleBinding + Role:
+#   ✗ INVALID - Cannot bind ClusterRoleBinding to a Role

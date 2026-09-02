@@ -1,0 +1,140 @@
+# RBAC for ArgoCD (Not GitHub Actions!)
+# ArgoCD needs permissions to deploy your applications
+
+# ============================================
+# ServiceAccount for ArgoCD Application Controller
+# ============================================
+# Note: ArgoCD typically creates its own ServiceAccount
+# But you can customize permissions here if needed
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argocd-application-controller
+  namespace: argocd
+
+---
+# ============================================
+# ClusterRole for ArgoCD to manage all resources
+# ============================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argocd-application-controller
+rules:
+# ── Full access to apps/deployments ──
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+  verbs: ["*"]
+
+# ── Services, Endpoints, ConfigMaps, Secrets ──
+- apiGroups: [""]
+  resources: 
+    - "services"
+    - "endpoints"
+    - "configmaps"
+    - "secrets"
+    - "persistentvolumeclaims"
+    - "pods"
+    - "serviceaccounts"
+  verbs: ["*"]
+
+# ── Ingress, NetworkPolicy ──
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses", "networkpolicies"]
+  verbs: ["*"]
+
+# ── RBAC (ArgoCD needs to create roles for apps) ──
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["roles", "rolebindings"]
+  verbs: ["*"]
+
+# ── Batch jobs ──
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["*"]
+
+# ── Autoscaling ──
+- apiGroups: ["autoscaling"]
+  resources: ["horizontalpodautoscalers"]
+  verbs: ["*"]
+
+# ── Monitoring (Prometheus CRDs) ──
+- apiGroups: ["monitoring.coreos.com"]
+  resources: ["servicemonitors", "prometheusrules"]
+  verbs: ["*"]
+
+# ── Namespaces ──
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "list", "watch", "create"]
+
+# ── Events (for logging) ──
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "list", "watch"]
+
+---
+# ============================================
+# ClusterRoleBinding
+# ============================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argocd-application-controller
+subjects:
+- kind: ServiceAccount
+  name: argocd-application-controller
+  namespace: argocd
+roleRef:
+  kind: ClusterRole
+  name: argocd-application-controller
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# ============================================
+# ServiceAccount for ArgoCD Server
+# ============================================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: argocd-server
+  namespace: argocd
+
+---
+# ============================================
+# ClusterRole for ArgoCD Server (UI/API)
+# ============================================
+# ArgoCD Server needs read access to show resources in UI
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: argocd-server
+rules:
+# ── Read-only access to all resources ──
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["get", "list", "watch"]
+
+# ── Can create/delete ArgoCd Applications ──
+- apiGroups: ["argoproj.io"]
+  resources: ["applications", "applicationsets", "appprojects"]
+  verbs: ["*"]
+
+---
+# ============================================
+# ClusterRoleBinding for ArgoCD Server
+# ============================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: argocd-server
+subjects:
+- kind: ServiceAccount
+  name: argocd-server
+  namespace: argocd
+roleRef:
+  kind: ClusterRole
+  name: argocd-server
+  apiGroup: rbac.authorization.k8s.io
