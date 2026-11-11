@@ -7,7 +7,7 @@ services:
           name: auth-secret
 
   - name: user
-    image: ghcr.io/julietwainoi/user-service:f54b6af793bc8fc0a6582b89e38a0d38567029ce
+    image: ghcr.io/julietwainoi/user-service:fc87ab435c1f04660e523548d81f4a8d8a863da7
     port: 5000
 
   - name: product
@@ -15,7 +15,7 @@ services:
     port: 5000
 
   - name: payment
-    image: ghcr.io/julietwainoi/payment-service:f54b6af793bc8fc0a6582b89e38a0d38567029ce
+    image: ghcr.io/julietwainoi/payment-service:fc87ab435c1f04660e523548d81f4a8d8a863da7
     port: 5000
 
   - name: order
