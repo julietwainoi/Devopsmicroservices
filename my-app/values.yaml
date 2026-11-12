@@ -11,7 +11,7 @@ services:
     port: 5000
 
   - name: product
-    image: ghcr.io/julietwainoi/product-service:f54b6af793bc8fc0a6582b89e38a0d38567029ce
+    image: ghcr.io/julietwainoi/product-service:fb92ef56c944d1dd9ced1413d8b97701bd9164a4
     port: 5000
 
   - name: payment
