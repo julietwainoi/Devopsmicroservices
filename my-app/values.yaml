@@ -7,7 +7,7 @@ services:
           name: auth-secret
 
   - name: user
-    image: ghcr.io/julietwainoi/user-service:fc87ab435c1f04660e523548d81f4a8d8a863da7
+    image: ghcr.io/julietwainoi/user-service:c241dcdd0594fca698e022f5a2f099d33b510287
     port: 5000
 
   - name: product
